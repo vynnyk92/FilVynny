@@ -1,0 +1,142 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+@section Scripts{
+<script src="~/scripts/jquery-3.1.1.js"></script>
+<script src="~/Scripts/jquery-3.1.1.min.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
+<script src="~/scripts/jquery.signalR-2.2.1.js"></script>
+<script src="~/scripts/jquery.signalR-2.2.1.min.js"></script>
+<script src="~/scripts/ckeditor/ckeditor.js"></script>
+<script src="~/scripts/ckeditor/adapters/jquery.js"></script>
+<script src="~/signalr/hubs"></script>
+    <script type="text/javascript">
+    
+        $(function () {
+
+        var notificationhub = $.connection.notificationHub;
+
+        notificationhub.client.displayMessage = function (message) {
+
+            $('#msg').html(message);
+        };
+
+        $.connection.hub.start();
+
+    });
+    </script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#submit').click(function save() {
+            var page = {
+                'PageName': $("#PageName").val(),
+                'PageContent': CKEDITOR.instances.PageContent.getData()
+            }
+            $.ajax({
+                beforeSend: function () {
+                    confirm('Do you want to save new page? '
+                      + $("#PageName").val());
+                },
+                type: "POST",
+                url: '/Home/AddPage',
+                data: JSON.stringify(page),
+                contentType: "application/json; charset=utf-8",
+                dataType: "html",
+                success: function (data) {
+                    
+                    $('#results').html(data); // получаем нужный элемент
+                    refreshPage();
+                },
+                error: function (data) {
+                    alert("OOps! Somrething Wrong");
+                }
+            });
+        });
+
+        $('#editorVal').click(function () {
+            var editor_data = CKEDITOR.instances.PageContent.getData();
+            $('#PageContentReader').text(editor_data)
+        })
+        
+
+        $('#AllPages').click(function () {
+            $.ajax({
+                beforeSend: function () {
+                   var d= confirm('Do you understand that you lost page and its content? Add Page To data base before calling new!'
+                      + $("#PageName").val());
+                },
+                type: "POST",
+                url: '/Home/LoadPage',
+                data: "id=" + $('#lst option:selected').val(),
+                dataType: "json",
+                success: function (data) {
+                    alert('Success data loading' + data.PageName + data.PageContent)
+                    $('#PageName').val(data.PageName);
+                    CKEDITOR.instances.PageContent.setData(data.PageContent);
+                },
+                error: function () { alert("Wrong query!"); }
+            });
+        });
+
+        function refreshPage()
+        {
+            $.ajax({
+                type: "GET",
+                url: '/Home/Index',
+            })
+        }
+    });
+</script>
+
+}
+<h2>Let's start</h2>
+@model IEnumerable<TestApp.Models.Page>
+<div class="row">
+    
+        <div class="col-lg-2">
+            <form>
+                <div class="row">
+                    <button class="btn btn-primary" type="button" id="AllPages">
+                        Edit Page
+                    </button>
+                </div>
+                <div class="row">
+                    <label class="help-block">Here is all pages</label> <br />
+                    @Html.ListBox("All Pages", new SelectList(Model, "Id", "PageName"), new { @class="listbox", id="lst"})
+                </div>
+            </form>
+</div>
+ <style>
+     .listbox {
+  width:120px;
+   padding-left: 0;
+  margin-bottom: 0;
+  list-style: none;
+  border-radius: 4px;
+     }
+ </style>
+
+    <div class="col-lg-8">
+        <div class="row">
+            <input type="text" name="PageName" id="PageName" class="container" />
+            <input type='button' id="submit" value='Add New Page' class="btn btn-success" />
+            <label>@DateTime.Now.ToLongTimeString()</label>
+            <input type="button" value="Get Text Editor Content" class="btn btn-default" id="editorVal" />
+        </div>
+
+        <div class="row">
+
+            <textarea id="PageContent" name="PageContent" style="resize:none">&lt;p&gt;Initial value.&lt;/p&gt;</textarea>
+            <script type="text/javascript">CKEDITOR.replace('PageContent');</script>
+
+        </div>
+        <div class="row">
+            <textarea id="PageContentReader" name="PageContentReader" style="resize:none; max-width:100%; min-width:100%; height:150px" class="form-control"></textarea>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <label id="results"></label>
+    <label class="danger" id="msg"></label>
+</div>
